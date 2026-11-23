@@ -64,7 +64,7 @@
         if (!release) throw new Error("Non è ancora stato pubblicato un pacchetto.");
         const assets = new Map(release.assets.map(asset => [asset.name, asset.browser_download_url]));
         container.replaceChildren();
-        container.append(element("h2", `Latest pack: ${release.tag_name}`));
+        container.append(element("h2", `Pacchetto più recente: ${release.tag_name}`));
         container.append(element("p", "Scarica l'archivio per il tuo sistema operativo. Di norma il viewer installa automaticamente il pacchetto corretto."));
         const list = element("div", null, "downloads");
         for (const [platform, label] of platforms) {
