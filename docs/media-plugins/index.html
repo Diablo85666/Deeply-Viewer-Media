@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Deeply Viewer Media Plugins</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.55 system-ui, sans-serif; background: #10131b; color: #eef0f6; }
+    body { max-width: 760px; margin: 0 auto; padding: 3rem 1.25rem; }
+    h1 { line-height: 1.15; }
+    a { color: #b6a4ff; }
+    .card { margin: 1rem 0; padding: 1rem 1.25rem; border: 1px solid #394050; border-radius: 12px; background: #191e29; }
+    .downloads { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    .button { display: inline-block; padding: .5rem .85rem; border-radius: 8px; background: #7356d8; color: white; text-decoration: none; }
+    .muted { color: #b2b8c5; }
+    code { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Deeply Viewer Media Plugins</h1>
+    <p>These optional packs provide web, video, and audio media support. Deeply Viewer asks before downloading, verifies the exact archive size and SHA-256 pinned by that viewer build, then installs it in the local media folder.</p>
+    <p class="muted">For in-viewer installation, use <strong>Scarica plugin</strong> in the Media settings. Manual downloads are provided for inspection and troubleshooting.</p>
+    <section id="latest" class="card" aria-live="polite">
+      <p>Loading published packs…</p>
+    </section>
+    <p><a href="https://github.com/Diablo85666/Deeply-Viewer-Media/releases">All media-plugin releases and source archives</a></p>
+  </main>
+  <script>
+    "use strict";
+    const api = "https://api.github.com/repos/Diablo85666/Deeply-Viewer-Media/releases?per_page=100";
+    const releasesPage = "https://github.com/Diablo85666/Deeply-Viewer-Media/releases";
+    const platforms = [
+      ["windows-x64", "Windows x64"],
+      ["linux-x64", "Linux x64"],
+      ["macos-universal", "macOS universal"]
+    ];
+    const container = document.getElementById("latest");
+    const element = (tag, text, className) => {
+      const node = document.createElement(tag);
+      if (text) node.textContent = text;
+      if (className) node.className = className;
+      return node;
+    };
+    const safeLink = (href, label, className) => {
+      const url = new URL(href);
+      if (url.protocol !== "https:" || url.hostname !== "github.com") return null;
+      const link = element("a", label, className);
+      link.href = url.href;
+      link.rel = "noopener noreferrer";
+      return link;
+    };
+    fetch(api, { headers: { Accept: "application/vnd.github+json" } })
+      .then(response => {
+        if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+        return response.json();
+      })
+      .then(releases => {
+        const published = releases
+          .filter(release => !release.draft && /^media-plugins-\d+$/.test(release.tag_name))
+          .sort((a, b) => Number(b.tag_name.slice(14)) - Number(a.tag_name.slice(14)));
+        const release = published[0];
+        if (!release) throw new Error("No media-plugin pack has been published yet.");
+        const assets = new Map(release.assets.map(asset => [asset.name, asset.browser_download_url]));
+        container.replaceChildren();
+        container.append(element("h2", `Latest pack: ${release.tag_name}`));
+        container.append(element("p", "Download the archive for your operating system. The viewer normally installs the correct pack itself."));
+        const list = element("div", null, "downloads");
+        for (const [platform, label] of platforms) {
+          const archive = `Deeply-Media-Plugins-${release.tag_name.slice(14)}-${platform}.zip`;
+          const href = assets.get(archive);
+          if (!href) continue;
+          const link = safeLink(href, `Download ${label}`, "button");
+          if (link) list.append(link);
+          const checksum = assets.get(`${archive}.sha256`);
+          if (checksum) {
+            const checksumLink = safeLink(checksum, "SHA-256");
+            if (checksumLink) list.append(checksumLink);
+          }
+        }
+        if (!list.childElementCount) throw new Error("The latest release has no downloadable platform archives.");
+        container.append(list);
+        const releaseLink = safeLink(release.html_url, "Release notes, licenses, and corresponding source");
+        if (releaseLink) {
+          const releaseNote = element("p");
+          releaseNote.append(releaseLink);
+          container.append(releaseNote);
+        }
+      })
+      .catch(error => {
+        container.replaceChildren(element("p", `${error.message} Open the releases page to check availability.`));
+        const link = safeLink(releasesPage, "View releases");
+        if (link) container.append(link);
+      });
+  </script>
+</body>
+</html>
